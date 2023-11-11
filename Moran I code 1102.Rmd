@@ -46,6 +46,15 @@ library(r2symbols)
 library(corrplot)
 library(spdep)
 library(tmap)
+library(sf)
+#library(rgeos)
+library(spdep)
+library(spgwr)
+library(tmap)
+library(spatialreg)
+library(whitestrap)
+library(lmtest)
+library(tseries)
 
 options(scipen=999)
 
@@ -73,10 +82,10 @@ newqBr <- function(df, variable, rnd) {
 
 # **Introduction**
 
-Philadelphia, renowned for its rich history and pulsating present, is home to a continually evolving real estate environment. However, a study by the Economic League reveals a nuanced picture: the overall proportion of Philadelphia households grappling with housing cost burden experienced a decrease from 29.8% to 26.7% between 2016 and 2021(Economic League, 2023). Nevertheless, this alteration in cost burden manifested divergently across various income brackets. Considering housing is a fundamental human necessity, ensuring affordability is crucial for maintaining well-being and quality of life. Consequently, comprehending the factors that influence housing values is essential for exerting better control over the housing market and making more strategic, informed decisions.
+Philadelphia, celebrated for its historical depth and vibrant present, boasts an ever-changing real estate landscape. Yet, a report from the Economic League paints a more intricate image: between 2016 and 2021, the percentage of Philadelphia households struggling with housing costs dipped from 29.8% to 26.7% (Economic League, 2023). Given the essential nature of housing as a basic human need, ensuring its affordability is paramount to sustaining quality of life. Thus, understanding the elements that shape housing prices is key to navigating the housing market more effectively and making wiser, informed choices.
 
-
-This report aims to explore the relationship between median house values and various neighborhood characteristics within the city of Philadelphia. 
+In our previous exploration of Philadelphia's housing landscape, we used Ordinary Least Squares (OLS) regression to examine the relationship between median house value and several neighborhood characteristics, including the proportion of residents in the Block Group with at least a bachelor’s degree, housing vacancy, percentage of housing units that are detached single-family houses, and number of households living poverty. While OLS provided valuable insights, it operates on the assumption of no autocorrelation. However, the real world, especially in the domain of housing and neighborhood dynamics, often defies this assumption as there is the phenomena of spatial autocorrelation, which can lead to biased and inefficient estimates if not addressed in regression models. To confront this inherent spatial nature of our data, in this report, we will venture into spatial lag, spatial error, and geographically weighted regression methodologies to understand if these models can better account for the spatial dependencies lurking in our OLS residuals, offering a more holistic and accurate picture of Philadelphia's housing valuation dynamics.
+ 
 
 
 # **Methods**
@@ -124,4 +133,100 @@ moranSig.plot<-function(df,listw, title){
   print(tm)
 }
 moranSig.plot(df.LISA, queenlist, 'p-value')
+```
+## Regression Analysis: OLS Regression
+
+First, let's run an OLS regression. The ` logLik` command prints the log likelihood. We can also run the same tests for heteroscedasticity and normality of residuals that we see in the GeoDa output.
+
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+reg<-lm(formula=LNMEDHVAL ~ PCTVACANT + PCTSINGLES + PCTBACHMOR + LNNBELPOV, data=data_geom)
+summary(reg)
+#Prints the log likelihood
+logLik(reg)                  
+#Prints the results of the Breusch-Pagan Test to assess whether heteroscedasticity is present (package: lmtest)
+bptest(reg, studentize=FALSE)
+#Prints the results of the Koenker-Bassett Test (also known as the Studentized Breusch-Pagan Test) to assess whether heteroscedasticity is present (package: lmtest)
+bptest(reg)       
+#Prints the results of the White Test to assess whether heteroscedasticity is present (package: whitestrap)
+white_test(reg)   
+#Prints the results of the Jarque-Bera Test to assess whether residuals are normal (package: tseries)
+jarque.bera.test(reg$residuals)
+```
+
+Now, let's generate standardized residuals, which are OLS Model residuals divided by an estimate of their standard deviation, and map them. Visually, it certainly seems that there's spatial autocorrelation in the residuals, with some higher values clustered in the northeast and northwest of the city, and some lower values clustered in north Philadelphia and downtown. However, a visual assessment is not sufficient, and we will test the presence of spatial autocorrelation in two ways: 1) by regressing residuals on their queen neighbors, and 2) by looking at the Moran's I of the residuals.
+
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+standardised<-rstandard(reg)
+resnb<-sapply(queen, function(x) mean(standardised[x]))
+
+data_geom$standardised <- standardised    #creating a new variable in the shapefile shp.
+OLS.Residuals.Map<-tm_shape(data_geom)+
+  tm_fill(col='standardised', style='quantile', title='Standardized OLS Residuals', 
+          palette ='Blues')+
+  tm_layout(frame=FALSE, title = 'Standardised OLS Residuals')
+OLS.Residuals.Map
+
+```
+
+First, let's regress the OLS standardized residuals on the spatial lag of the OLS residuals (i.e., OLS residuals at the queen neighbors). We can see that the beta coefficient of the lagged residuals is significant and positive (0.598, p<0.0001), meaning that there's a significant level of spatial autocorrelation in the residuals. This is consistent with Moran's I of the residuals we see below.
+
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+#Regressing residuals on their nearest neighbors.
+res.lm <- lm(formula=standardised ~ resnb)
+summary(res.lm)
+```
+
+Again, we can use ` moran.mc` to generate a Moran’s I statistic and a pseudo p-value.
+
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+moran.mc(standardised, queenlist, 999, alternative="two.sided")
+moran.plot(standardised, queenlist)
+```
+## Regression Analysis: Spatial Lag Regression
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+lagreg<-lagsarlm(formula=LNMEDHVAL ~ PCTVACANT + PCTSINGLES + PCTBACHMOR + LNNBELPOV, data=data_geom, queenlist)
+summary(lagreg)
+LR.Sarlm(lagreg, reg) #Here lagreg is the SL output; reg is the OLS output
+#Prints the results of the Breusch-Pagan Test to assess whether heteroscedasticity is present (package: lmtest)
+bptest.Sarlm(lagreg, studentize=FALSE)
+#Prints the results of the Koenker-Bassett Test (also known as the Studentized Breusch-Pagan Test) to assess whether heteroscedasticity is present (package: lmtest)
+bptest.Sarlm(lagreg)       
+#Prints the results of the Jarque-Bera Test to assess whether residuals are normal (package: tseries)
+jarque.bera.test(lagreg$residuals)
+```
+
+Now, we can map the Spatial Lag Model residuals (which is an exercise left for the student) and look at the the Moran's I of the Spatial Lag Model residuals. We see that these residuals from the Spatial Lag Model aren't spatially autocorrelated, which is exactly what we were hoping to achieve.
+
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+reslag<-lagreg$residuals
+lagMoranMc<-moran.mc(reslag, queenlist,999, alternative="two.sided")
+lagMoranMc
+moran.plot(reslag, queenlist)
+```
+
+## Regression Analysis: Spatial Error Regression
+To fit a Spatial Error Model, we use the `errorsarlm` function. 
+
+Here, we see that lambda has the value of 0.45391 and is significant. We can also look at the AIC and the log likelihood.  The AIC here is 1271.8, which is lower (better) than in OLS but higher (worse) than in the Spatial Lag Model. The log likelihood here is -630.899, which is higher than the value we see for OLS. The ` LR.Sarlm` command does a likelihood ratio test comparing the Spatial Error Model to the OLS Model. The null hypothesis here is that the Spatial Error Model isn't better than OLS, which we can reject (p-value <0.00001).
+
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+errreg<-errorsarlm(formula=LNMEDHVAL ~ PCTVACANT + PCTSINGLES + PCTBACHMOR + LNNBELPOV, data=data_geom, queenlist)
+reserr<-residuals(errreg)
+errresnb<-sapply(queen, function(x) mean(reserr[x]))
+summary(errreg)
+LR.Sarlm(errreg, reg)
+#Prints the results of the Breusch-Pagan Test to assess whether heteroscedasticity is present (package: lmtest)
+bptest.Sarlm(errreg, studentize=FALSE)
+#Prints the results of the Koenker-Bassett Test (also known as the Studentized Breusch-Pagan Test) to assess whether heteroscedasticity is present (package: lmtest)
+bptest.Sarlm(errreg)       
+#Prints the results of the Jarque-Bera Test to assess whether residuals are normal (package: tseries)
+jarque.bera.test(errreg$residuals)
+```
+
+Now, let's look at the the Moran's I of Spatial Error Model residuals. (Again, looking at the map of the Spatial Error Model residuals is an exercise left for the student.) We see that the Spatial Error Model residuals aren't as spatially autocorrelated as the OLS residuals.
+
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+errMoranMc<-moran.mc(reserr, queenlist, 999, alternative="two.sided")
+errMoranMc
+moran.plot(reserr, queenlist)
 ```
