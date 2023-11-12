@@ -95,7 +95,7 @@ Heteroscedasticity is defined as the dispersion of residuals varies by level of 
 Another assumption, normality of errors, meaning that the errors should be random noise, and they also should be normally distributed. The Jarque-Bera test in R examines the null hypothesis that the residuals are from a normal distribution, whereas the null hypothesis is that the errors are normal while the alternative hypothesis of non-normality. 
 
 
-** d) Geographically Weighted Regression
+## d) Geographically Weighted Regression
 
 For this assignment, we will conduct Geographically Weighted Regression (GWR) entirely in R. 
 
