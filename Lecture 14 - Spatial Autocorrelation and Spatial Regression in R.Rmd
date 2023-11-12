@@ -232,8 +232,10 @@ res.lm <- lm(formula=standardised ~ resnb)
 summary(res.lm)
 ```
 ```{r}
-plot(standardised,resnb)
+plot(standardised, resnb)
 abline(res.lm)
+abline(h=0, lty=2)
+abline(v=0, lty=2)
 ```
 
 Again, we can use ` moran.mc` to generate a Moran’s I statistic and a pseudo p-value.
@@ -271,6 +273,14 @@ reslag<-lagreg$residuals
 lagMoranMc<-moran.mc(reslag, queenlist,999, alternative="two.sided")
 lagMoranMc
 ```
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+shp$reslag <- reslag
+slag.Residuals.Map<-tm_shape(shp)+
+  tm_fill(col='reslag', style='quantile', title='Spatial Lag Residuals', 
+          palette ='Blues')+
+  tm_layout(frame=FALSE, title = 'Spatial Lag Residuals')
+slag.Residuals.Map
+```
 
 ## Regression Analysis: Spatial Error Regression
 To fit a Spatial Error Model, we use the `errorsarlm` function. 
@@ -292,6 +302,15 @@ jarque.bera.test(errreg$residuals)
 ```
 
 Now, let's look at the the Moran's I of Spatial Error Model residuals. (Again, looking at the map of the Spatial Error Model residuals is an exercise left for the student.) We see that the Spatial Error Model residuals aren't as spatially autocorrelated as the OLS residuals.
+
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+shp$reserr <- reserr
+serror.Residuals.Map<-tm_shape(shp)+
+  tm_fill(col='reserr', style='quantile', title='Spatial Error Residuals', 
+          palette ='Blues')+
+  tm_layout(frame=FALSE, title = 'Spatial Error Residuals')
+serror.Residuals.Map
+```
 
 ```{r warning=FALSE, message=FALSE, cache=FALSE}
 errMoranMc<-moran.mc(reserr, queenlist, 999, alternative="two.sided")
@@ -322,7 +341,7 @@ Let's start with **adaptive bandwidth**, which varies the distance, but fixes th
 #Setting an adaptive bandwidth
 shps <- as(shp, 'Spatial')  #These analyses are easier to do when the data are of the SpatialPolygonsDataFrame class
 class (shps)
-bw<-gwr.sel(formula=LNMEDHHINC~LNMEDHVAL+PCTVACANT, 
+bw<-gwr.sel(formula=LNMEDHVAL ~ PCTSINGLES + PCTVACANT + PCTBACHMOR + LNNBELPOV, 
             data=shps,
             method = "aic",
             adapt = TRUE)
@@ -333,7 +352,7 @@ We might also want to create a **fixed bandwidth**. Notice that the output value
 
 ```{r warning=FALSE, message=FALSE, cache=FALSE}
 #setting a fixed bandwidth
-bw_fixed<-gwr.sel(formula=LNMEDHHINC~LNMEDHVAL+PCTVACANT, 
+bw_fixed<-gwr.sel(formula=LNMEDHVAL ~ PCTSINGLES + PCTVACANT + PCTBACHMOR + LNNBELPOV, 
             data=shps,
             method = "aic",
             adapt = FALSE)
@@ -350,7 +369,7 @@ We can compare the outputs from using an adaptive bandwidth specified by the pro
 
 Below are the results using the **adaptive bandwidth**. 
 ```{r warning=FALSE, message=FALSE, cache=FALSE}
-gwrmodel<-gwr(formula=LNMEDHHINC~LNMEDHVAL+PCTVACANT,
+gwrmodel<-gwr(formula=LNMEDHVAL ~ PCTSINGLES + PCTVACANT + PCTBACHMOR + LNNBELPOV,
               data=shps,
               adapt = bw, #adaptive bandwidth determined by proportion of observations accounted for
               gweight=gwr.Gauss,
@@ -361,7 +380,7 @@ gwrmodel
 
 Below are the results using the **fixed bandwidth**.
 ```{r warning=FALSE, message=FALSE, cache=FALSE}
-gwrmodel_fixed<-gwr(formula=LNMEDHHINC~LNMEDHVAL+PCTVACANT,
+gwrmodel_fixed<-gwr(formula=LNMEDHVAL ~ PCTSINGLES + PCTVACANT + PCTBACHMOR + LNNBELPOV,
               data=shps,
               bandwidth = bw_fixed, #fixed bandwidth
               gweight=gwr.Gauss,
@@ -382,23 +401,35 @@ summary(gwrmodel$SDF)
 We can also map the standardized coefficients. The higher the absolute value of the ratio between the coefficient and the standard error, the more plausible it is that the relationship between the predictor and the dependent variable is significant at the location.
 ```{r warning=FALSE, message=FALSE, cache=FALSE}
 gwrresults<-as.data.frame(gwrmodel$SDF)
-shps$coefLNMEDHVALst<-gwrresults$LNMEDHVAL/gwrresults$LNMEDHVAL_se
+shps$coefPCTSINGLESst<-gwrresults$PCTSINGLES/gwrresults$PCTSINGLES_se
 shps$coefPCTVACANTst<-gwrresults$PCTVACANT/gwrresults$PCTVACANT_se
+shps$coefPCTBACHMORst<-gwrresults$PCTBACHMOR/gwrresults$PCTBACHMOR_se
+shps$coefLNNBELPOVst<-gwrresults$LNNBELPOV/gwrresults$LNNBELPOV_se
 
 shps$gwrE<-gwrresults$gwr.e
 shps$localR2<-gwrresults$localR2
 
-coefLNMEDHVAL<-tm_shape(shps)+
-  tm_fill(col='coefLNMEDHVALst', breaks=c(-Inf, -6, -4, -2, 0, 2, 4, 6, Inf), title='Standardized coefficient of LNMEDHVAL', 
+coefPCTSINGLES<-tm_shape(shps)+
+  tm_fill(col='coefPCTSINGLESst', breaks=c(-Inf, -6, -4, -2, 0, 2, 4, 6, Inf), title='Standardized coefficient of PCTSINGLES', 
           palette ='-RdBu')+
-  tm_layout(frame=FALSE, title = 'Median House Value (Log)')
+  tm_layout(frame=FALSE, title = 'Percentage of Single Household', title.size = 0.8, legend.title.size = 0.8)
 
 coefPCTVACANT<-tm_shape(shps)+
   tm_fill(col='coefPCTVACANTst', breaks=c(-Inf, -6, -4, -2, 0, 2, 4, 6, Inf), title='Standardized coefficient of PCTVACANT', 
           palette='-RdBu')+
-  tm_layout(frame=FALSE, title = 'Percentage of Housing Vacant')
+  tm_layout(frame=FALSE, title = 'Percentage of Housing Vacant', title.size = 0.8, legend.title.size = 0.8)
 
-tmap_arrange(coefLNMEDHVAL, coefPCTVACANT, ncol=2)
+coefPCTBACHMOR<-tm_shape(shps)+
+  tm_fill(col='coefPCTBACHMORst', breaks=c(-Inf, -6, -4, -2, 0, 2, 4, 6, Inf), title='Standardized coefficient of PCTBACHMOR', 
+          palette='-RdBu')+
+  tm_layout(frame=FALSE, title = 'Percentage of Bachelor Degree', title.size = 0.8, legend.title.size = 0.8)
+
+coefLNNBELPOV<-tm_shape(shps)+
+  tm_fill(col='coefLNNBELPOVst', breaks=c(-Inf, -6, -4, -2, 0, 2, 4, 6, Inf), title='Standardized coefficient of LNNBELPOV', 
+          palette='-RdBu')+
+  tm_layout(frame=FALSE, title = 'Number of Households Living in Poverty', title.size = 0.8, legend.title.size = 0.8)
+
+tmap_arrange(coefPCTSINGLES, coefPCTVACANT, coefPCTBACHMOR, coefLNNBELPOV, ncol=2, nrow=2)
 ```
 
 And we can also look at the spatial distribution of the local R-squares. We can see that the two predictors do a good job explaining the variance in our dependent variable in NW Philadelphia, but not in many other parts of the city.
