@@ -89,6 +89,29 @@ In our previous exploration of Philadelphia's housing landscape, we used Ordinar
 
 
 # **Methods**
+## a)	A Description of the Concept of Spatial Autocorrelation
+There's a saying: "everything is related to everything else, but near things are more related than distant things." This adage, known as Tobler's First Law of Geography, brings to the fore the concept of spatial autocorrelation – the phenomenon where geographically close observations influence each other. In other words, the attributes of places (or events) become more dissimilar as they are located further apart.
+
+To evaluate spatial autocorrelation, we use Moran's I, a correlation coefficient that measures the spatial relationships within a dataset. Essentially, it assesses the similarity of an object to its neighbors.
+
+Turning to the formula of Moran’s I, the Moran’s I can be calculated as:
+
+
+N is the number of spatial units
+X is the variable of interest.
+x- is the mean of the variable of interest
+wij is a matrix of spatial weights between spatial units i and j
+
+In this report, the weight matrix we use is queen contiguity. Based on this spatial matrix, a unit is considered adjacent (or a neighbor) to another if it shares either a border or a vertex (corner) with the other unit. This concept draws parallels to the movement of a queen in chess, which can traverse any number of squares in vertical, horizontal, or diagonal directions. For a dataset with n observations, this leads to an n x n matrix, commonly referred to as the weight or link matrix, which captures the pairwise spatial associations across the data. In this matrix, a '1' denotes neighboring spatial units, while a '0' signifies non-neighboring units. For this report, we will consistently use this weight matrix. However, it's generally advisable to test multiple weight matrices to ensure that our findings aren't solely influenced by the specific matrix chosen.
+
+To determine if the spatial autocorrelation, as measured by Moran's I, is significant, we perform random permutations, which tests the null hypothesis that there is no spatial autocorrelation against the alternative hypothesis that there is significant spatial autocorrelation. In this process, the observed value of Moran's I is compared to a distribution of Moran's I values generated from many random permutations of the spatial data. To elaborate, the observed house price values undergo 999 random shuffles, producing a corresponding 999 Moran’s I values from these permutations. Next, we arrange the 1000 Moran’s I values in decreasing order to determine the position of the Moran’s I value for the observed house price variable in relation to the values from the random permutations. If our observed value is in the extreme ends of this distribution (either very high or very low), we reject the null hypothesis, indicating that the observed spatial autocorrelation is significant.
+
+While Moran's I provides a global measure of spatial autocorrelation, it doesn't tell us where the local clusters and local spatial outliers are. Local spatial autocorrelation, like Local Indicators of Spatial Association (LISA), allow us to identify specific areas of significant clustering or dispersion. For each block, by looking at the deviations of its housing value from the mean housing values(zi) and that of its neighbors(zj), spatial weights between i and j, and the total number of observations(n), we can then determine if it's part of a significant cluster of similar values (high-high or low-low) or if it's an outlier in its neighborhood (high-low or low-high). To be more specific, a positive value indicates that housing value of block i is surrounded by blocks with similar housing values, either all high or all low. A negative value indicates that housing value of block i a positive value indicates that housing value of block I is surrounded by blocks with similar housing values, either all high or all low. Also, a value near zero indicates no significant local spatial autocorrelation.
+
+Significance tests for local spatial autocorrelation are based on Monte Carlo permutation approach, which tests the null hypothesis that there is no local spatial autocorrelation at location I against the alternative hypothesis that the local spatial autocorrelation is significant. During the permutation, the housing values of each block will be randomly shuffled for 999 times, based on which we calculate the new Moran’s I value for every location for each permutation. The value of Moran’s I at location i for the original dataset is ranked relative to the list of the values produced by the reshufflings. When values of the Moran’s I at location i for the original dataset are very low or very high relative to the list of results produced by the shuffling procedure, they are significant. A pseudo significance level can be ascertained by observing the rank of the observed value in comparison to the permuted outcomes. For instance, if the value of Moran’s I at location i from the original configuration ranks as the 88th highest out of 999 permutations, it's viewed as a 88 in 1000 event with a pseudosignificance of p ~ 0.088. 
+
+# **Results**
+##a)Spatial autocorrelation
 ## Global Moran's I
 ```{r}
 ## Defining Neighbors
@@ -230,3 +253,18 @@ errMoranMc<-moran.mc(reserr, queenlist, 999, alternative="two.sided")
 errMoranMc
 moran.plot(reserr, queenlist)
 ```
+
+## c)	Spatial Lag and Spatial Error Regression Results
+The spatial lag model yields several key insights. Firstly, the W_LNMEDHAL is 0.6511, signifying a substantial and significant spatial relationship: median house values in one area are moderately strongly linked with those in adjacent areas. Moreover, the predictors, including LNNBELPOV, PCTBACHMOR, PCTSINGLES, and PCTVACNT, have p-values far below the 0.05 threshold, confirming their statistical significance. When comparing with the Ordinary Least Squares (OLS) model, there's a slight uptick in the p-values for these predictors, hinting at a greater likelihood that the associations between median housing values and these predictors could be attributed to chance.
+
+At the same time, as suggested by the result of the Breusch-Pagan test, the p value is way much smaller than 0.05, which suggests that we reject the null hypothesis and acknowledge the presence of heteroscedasticity.
+
+In comparing the OLS and Spatial Lag regressions, we turn to the Akaike Information Criterion (AIC), Log Likelihood, and the Likelihood Ratio Test. The Spatial Lag regression yields an AIC of 525.48—markedly lower than the OLS regression's AIC of 1435—and a Log Likelihood of -255.74, which surpasses the OLS regression's -711.49. The Likelihood Ratio Test's p-value is well below 0.05, leading us to discard the null hypothesis that the spatial lag model does not offer a better fit than the OLS model. Additionally, the Moran’s I value for the spatial lag model is a minimal -0.082412, indicating significantly reduced spatial autocorrelation in the residuals compared to the OLS regression. This evidence suggests that the Spatial Lag model provides a better fit.
+
+Now we will also look at the results of Spatial Error regression. Here, we see that lambda has the value of 0.81492 and is significant, indicating that the median house value in an area has a strong relationship with median house value in surrounding areas. Also, the corresponding p-value of all the predictors are smaller than 0.05, indicating that all of them are significant. All predictors maintain p-values under 0.05, underscoring their significance. Yet, relative to the OLS regression, the predictors' p-values have risen, signaling a diminution in the strength of their statistical significance.
+
+At the same time, as suggested by the result of the Breusch-Pagan test, the p value is way much smaller than 0.05, pointing to heteroscedasticity within the Spatial Lag regression residuals.
+
+When we consider the AIC and Log Likelihood for the Spatial Error regression, we find an AIC of 754.985 and a Log Likelihood of -372.6904—both figures are more favorable than those from the OLS model. The Moran’s I value for the Spatial Error regression is just -0.094532, indicating even weaker spatial autocorrelation compared with the OLS model. Given that the Spatial Lag model has the lowest AIC, it stands as the best-performing model.
+
+Lastly, in comparing the Spatial Lag and Spatial Error models, we note that the AIC for the Spatial Lag is lower than that of the Spatial Error Model, suggesting the former as the more predictive model. Since the Spatial Lag and Spatial Error models are not nested, direct comparison using the log-likelihood ratio is not applicable, thus we rely on the AIC for this assessment.
