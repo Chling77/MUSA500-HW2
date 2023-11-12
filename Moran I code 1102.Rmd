@@ -199,7 +199,6 @@ res.lm <- lm(formula=standardised ~ resnb)
 summary(res.lm)
 ```
 
-Again, we can use ` moran.mc` to generate a Moran’s I statistic and a pseudo p-value.
 
 ```{r warning=FALSE, message=FALSE, cache=FALSE}
 moran.mc(standardised, queenlist, 999, alternative="two.sided")
