@@ -95,7 +95,9 @@ There's a saying: "everything is related to everything else, but near things are
 To evaluate spatial autocorrelation, we use Moran's I, a correlation coefficient that measures the spatial relationships within a dataset. Essentially, it assesses the similarity of an object to its neighbors.
 
 Turning to the formula of Moran’s I, the Moran’s I can be calculated as:
-
+$$
+I=\frac{\sum_{i = 1}^{n}{(x_i-\bar{x})(y_i-\bar{y})}}{{\sum_{i = 1}^{n}{(x_i-\bar{x})^2}}{{\sum_{i = 1}^{n}sum_{j = 1}^{n}{(y_i-\bar{y})^2}}}}
+$$
 
 N is the number of spatial units
 X is the variable of interest.
@@ -216,6 +218,18 @@ bptest.Sarlm(lagreg)
 #Prints the results of the Jarque-Bera Test to assess whether residuals are normal (package: tseries)
 jarque.bera.test(lagreg$residuals)
 ```
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+#Spatial lag map
+model_residuals <- residuals(lagreg)
+#standardized2 <- rstandard(lagreg)
+resnb<-sapply(queen, function(x) mean(model_residuals[x]))
+
+data_geom$residuals <- model_residuals    #creating a new variable in the shapefile shp.
+SpatiallagResiduals_Map<-tm_shape(data_geom)+
+  tm_fill(col='residuals', style='quantile', title='Standardized Spatial Lag Residuals', palette ='Blues')+
+  tm_layout(frame=FALSE, title = 'Standardised Spatial Lag Residuals')
+SpatiallagResiduals_Map
+```
 
 
 
@@ -241,6 +255,19 @@ bptest.Sarlm(errreg, studentize=FALSE)
 bptest.Sarlm(errreg)       
 #Prints the results of the Jarque-Bera Test to assess whether residuals are normal (package: tseries)
 jarque.bera.test(errreg$residuals)
+```
+
+```{r warning=FALSE, message=FALSE, cache=FALSE}
+#Spatial error map
+model_residuals2 <- residuals(errreg)
+#standardized2 <- rstandard(lagreg)
+resnb<-sapply(queen, function(x) mean(model_residuals[x]))
+
+data_geom$residuals <- model_residuals2    #creating a new variable in the shapefile shp.
+SpatialerrorResiduals_Map<-tm_shape(data_geom)+
+  tm_fill(col='residuals', style='quantile', title='Standardized Spatial Error Residuals', palette ='Blues')+
+  tm_layout(frame=FALSE, title = 'Standardised Spatial Error Residuals')
+SpatialerrorResiduals_Map
 ```
 
 
