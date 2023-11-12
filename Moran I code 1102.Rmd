@@ -96,12 +96,13 @@ To evaluate spatial autocorrelation, we use Moran's I, a correlation coefficient
 
 Turning to the formula of Moran’s I, the Moran’s I can be calculated as:
 $$
-I=\frac{\sum_{i = 1}^{n}{(x_i-\bar{x})(y_i-\bar{y})}}{{\sum_{i = 1}^{n}{(x_i-\bar{x})^2}}{{\sum_{i = 1}^{n}sum_{j = 1}^{n}{(y_i-\bar{y})^2}}}}
+I=\frac{N\sum_{i = 1}\sum_{j = 1}^{n}wij{(x_i-\bar{x})(x_j-\bar{x})}}{\sum_{i = 1}\sum_{j = 1}^{n}wij{\sum_{i = 1}^{n}{(x_i-\bar{x})^2}}}
 $$
-
+In this formula:
 N is the number of spatial units
-X is the variable of interest.
-x- is the mean of the variable of interest
+Xi is the variable of interest.
+Xj is the variable value at another location j
+X- is the mean of the variable X
 wij is a matrix of spatial weights between spatial units i and j
 
 In this report, the weight matrix we use is queen contiguity. Based on this spatial matrix, a unit is considered adjacent (or a neighbor) to another if it shares either a border or a vertex (corner) with the other unit. This concept draws parallels to the movement of a queen in chess, which can traverse any number of squares in vertical, horizontal, or diagonal directions. For a dataset with n observations, this leads to an n x n matrix, commonly referred to as the weight or link matrix, which captures the pairwise spatial associations across the data. In this matrix, a '1' denotes neighboring spatial units, while a '0' signifies non-neighboring units. For this report, we will consistently use this weight matrix. However, it's generally advisable to test multiple weight matrices to ensure that our findings aren't solely influenced by the specific matrix chosen.
