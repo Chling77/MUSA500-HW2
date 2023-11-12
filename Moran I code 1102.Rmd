@@ -28,24 +28,6 @@ knitr::opts_chunk$set(echo = TRUE,
 ```{r setup2, include=FALSE, echo=FALSE, message=FALSE, warning=FALSE}
 knitr::opts_chunk$set()
 
-library(tidyr)
-library(dplyr)
-library(DAAG)
-library(car)  #to calculate VIF
-library(MASS)
-library(rsq)
-library(tidyverse) #for ggplot
-library(sf) #for maps
-library(cowplot) #for plotgrid
-#library(classInt)#for jenks breaks
-library(ggplot2)
-library(RColorBrewer)
-#library(broom)
-library(r2symbols)
-#library(lattice)
-library(corrplot)
-library(spdep)
-library(tmap)
 library(sf)
 #library(rgeos)
 library(spdep)
@@ -63,22 +45,8 @@ data_geom <-st_read("C:/Users/jiahangl/OneDrive - PennO365/data mining/A1/Lectur
 
 source("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/functions.r")
 
-palette5 <- c("#AED6F1","#85C1E9","#3498DB","#2874A6","#1B4F72")
-
 ```
 
-```{r, warning = FALSE, message = FALSE}
-newqBr <- function(df, variable, rnd) {
-  if (missing(rnd)) {
-    as.character(quantile(round(df[[variable]],4),
-                          c(.01,.2,.4,.6,.8), na.rm=T))
-  } else if (rnd == FALSE | rnd == F) {
-    as.character(formatC(quantile(df[[variable]],
-                                  c(.01,.2,.4,.6,.8), na.rm=T),
-                         digits = 3))
-  }
-}
-```
 
 # **Introduction**
 
@@ -112,6 +80,19 @@ To determine if the spatial autocorrelation, as measured by Moran's I, is signif
 While Moran's I provides a global measure of spatial autocorrelation, it doesn't tell us where the local clusters and local spatial outliers are. Local spatial autocorrelation, like Local Indicators of Spatial Association (LISA), allow us to identify specific areas of significant clustering or dispersion. For each block, by looking at the deviations of its housing value from the mean housing values(zi) and that of its neighbors(zj), spatial weights between i and j, and the total number of observations(n), we can then determine if it's part of a significant cluster of similar values (high-high or low-low) or if it's an outlier in its neighborhood (high-low or low-high). To be more specific, a positive value indicates that housing value of block i is surrounded by blocks with similar housing values, either all high or all low. A negative value indicates that housing value of block i a positive value indicates that housing value of block I is surrounded by blocks with similar housing values, either all high or all low. Also, a value near zero indicates no significant local spatial autocorrelation.
 
 Significance tests for local spatial autocorrelation are based on Monte Carlo permutation approach, which tests the null hypothesis that there is no local spatial autocorrelation at location I against the alternative hypothesis that the local spatial autocorrelation is significant. During the permutation, the housing values of each block will be randomly shuffled for 999 times, based on which we calculate the new Moran’s I value for every location for each permutation. The value of Moran’s I at location i for the original dataset is ranked relative to the list of the values produced by the reshufflings. When values of the Moran’s I at location i for the original dataset are very low or very high relative to the list of results produced by the shuffling procedure, they are significant. A pseudo significance level can be ascertained by observing the rank of the observed value in comparison to the permuted outcomes. For instance, if the value of Moran’s I at location i from the original configuration ranks as the 88th highest out of 999 permutations, it's viewed as a 88 in 1000 event with a pseudosignificance of p ~ 0.088. 
+
+## b) A Review of OLS Regression and Assumptions
+In our OLS regression model, we found that the predictors—PCTVACANT, PCTSINGLES, PCTBACHMOR, and LNNBELPOV100, are significantly correlated with the dependent variable LNMEDHVAL, and we rejected the null hypothesis that all beta coefficients are zero. We thoroughly assessed the regression assumptions for OLS regression, including the normality of residuals, homoscedasticity, absence of multicollinearity, linearity between the dependent variable y and each predictor x, and the independence of observations. While some assumptions are met in our model, there are some that must be challenged. We examined the spatial autocorrelation simply by plotting choropleth graphs, revealing noticeable spatial autocorrelation between the dependent variable and one of the predictors. Furthermore, the standardized regression residuals map exhibits some degree of spatial autocorrelation, challenging the assumption that residuals are random, and the observations are independent. 
+
+Therefore, we are using statistical method to test the spatial autocorrelation, which is called Moran’s I value, indicating whether spatial autocorrelation exists or not. Moran’s I value is between -1 to +1, and the more positive (approaching to +1) the number is, the stronger positive spatial autocorrelations there would be, and more negative (approaching to -1) the more negative spatial autocorrelations. 
+
+To further assess spatial autocorrelation within OLS residuals, we employed an additional method that involves regressing these residuals against those of nearby locations. For this analysis, two distinct approaches were used to define neighbors, the Rook Neighbor and the Queen Neighbor Matrix. While rook neighbor method only considers the immediate neighbors in the four cardinal directions with directly shared boundaries, queen neighbor accounts for neighbors with shared corners or intersections, thereby considering a broader range of spatial relationships. Generally, the Queen Neighbor Matrix is preferred due to its broader scope. 
+
+In this process, the resulting residuals are calculated as the average of the residuals from these neighboring locations. We then conducted a linear regression using OLS residuals against these averaged neighbor residuals. The focus of this analysis was on the significance of the relationship and the magnitude of the slope coefficient. A p-value less than 0.05 would lead us to reject the null hypothesis, thereby confirming the presence of spatial autocorrelation. 
+
+Heteroscedasticity is defined as the dispersion of residuals varies by level of predicted variable. To test the assumption of homoscedasticity, we have three tests that can be used in R: the Breusch-Pagan Test, Koenker-Bassett Test, and the White test. The null hypothesis here is that of homoscedasticity. If the p-value is less than 0.05, then we can reject the null hypothesis for the alternate hypothesis of heteroscedasticity. 
+
+Another assumption, normality of errors, meaning that the errors should be random noise, and they also should be normally distributed. The Jarque-Bera test in R examines the null hypothesis that the residuals are from a normal distribution, whereas the null hypothesis is that the errors are normal while the alternative hypothesis of non-normality. 
 
 # **Results**
 ##a)Spatial autocorrelation
