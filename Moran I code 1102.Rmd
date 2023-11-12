@@ -94,6 +94,31 @@ Heteroscedasticity is defined as the dispersion of residuals varies by level of 
 
 Another assumption, normality of errors, meaning that the errors should be random noise, and they also should be normally distributed. The Jarque-Bera test in R examines the null hypothesis that the residuals are from a normal distribution, whereas the null hypothesis is that the errors are normal while the alternative hypothesis of non-normality. 
 
+
+** d) Geographically Weighted Regression
+
+For this assignment, we will conduct Geographically Weighted Regression (GWR) entirely in R. 
+
+Geographically weighted regression (GWR) is a spatial analysis method that takes non-stationary variables, for example demographic factors in our case, into consideration and models the local regression between these predictors and an outcome of interest (Columbia University, 2023). Simpson’s paradox states that when the population is divided into smaller sub-groups, the relationship between two variables within a population changes, disappears, or even reverses (Sprenger & Weinberger, 2021). 
+
+Local regression refers to regression for each location, where you will need multiple observations to run a regression not just a single observation. GWR uses other observations in the dataset to run the regression, observations that are close to location I are given greater weights. 
+
+The equation for GWR model is written for each observation i=1…n: 
+
+y_i=β_i0+β_i1 x_i1+β_i2 x_i2+⋯+β_im x_im+ε_i=β_i0+∑(m)(k=1) β_ik x_ik+ε_i 
+
+Subscript i in the equation above indicates that the regression model describes the relationship between the dependent variable y and predictors xk, (k=1…m) around the location of observation i, and that the relationship is specific to that location. 
+
+To run a local regression, multiple observations (locations) are needed, not just a single observation (location) i. GWR uses other observations in the dataset to run the regression, observations that are close to location i are given greater weights. The weight of an observation varies with location i, observations closer to I have a stronger influence on the estimation of the parameters for location i. 
+
+Bandwidth is the distance h to express how farther the weighing kernel is covering. 
+Fixed bandwidth means that although the number of observations will vary around each point I, the bandwidth distance h (and the area) will remain constant. Adaptive bandwidth means that the number of observations will remain fixed, but the area will not be the same. In this case we are going to use adaptive bandwidth, as the fixed bandwidth is more appropriate in a setting where the distribution of the observations is relatively stable across space, while here the polygons are heterogeneously shaped or sized, so adaptive bandwidth is selected. 
+
+Most of the assumptions in OLS still hold in GWR, including the normality of residuals, homoscedasticity, no multicollinearity. Here for multicollinearity, we would look at the condition number in the attribute table, which indicates when the results are unstable due to local multicollinearity. The rule is, the results may not be reliable when the condition number is greater than 30, equal to null, or equal to -1.79769e+308. In addition to those, GWR also requires lots more observations, with at least 300. 
+
+P-value, which is usual to test whether the parameter estimates are significantly different from zero, is not that important in GWR model. As there is one set of parameters associated with each regression point, as well as one set of standard errors, then there are potentially hundreds or thousands of tests that would be required to determine whether parameters are locally significant.
+
+
 # **Results**
 ##a)Spatial autocorrelation
 ## Global Moran's I
